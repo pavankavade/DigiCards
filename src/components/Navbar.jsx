@@ -47,7 +47,7 @@ export default function Navbar({ currentView, setView, currentUser, onLogout, op
           </div>
           <div>
             <div className="font-extrabold text-xl tracking-tight text-slate-900 flex items-center gap-1">
-              Desi<span className="text-indigo-600">Card</span>
+              Digi<span className="text-indigo-600">Cards</span>
               <span className="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded">2026</span>
             </div>
             <p className="text-[11px] text-slate-500 -mt-1 font-medium">100 Themes Digital Visiting Card</p>

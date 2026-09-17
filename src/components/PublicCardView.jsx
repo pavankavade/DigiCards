@@ -595,7 +595,7 @@ export default function PublicCardView({ slug = 'ABC-Marketing', overrideThemeId
 
                 {/* Footer Tagline */}
                 <div className="text-center pt-2 text-[10px] text-slate-400">
-                  Created with <strong>DesiCard.in</strong> Digital Business Card
+                  Created with <strong>DigiCards.in</strong> Digital Business Card
                 </div>
 
               </div>

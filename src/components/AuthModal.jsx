@@ -137,7 +137,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
             <p className="text-xs text-slate-500 mt-1">
               {mode === 'login'
                 ? 'Please login with your email and password to manage your digital visiting card'
-                : 'Join DesiCard and launch your modern digital business card in minutes'}
+                : 'Join DigiCards and launch your modern digital business card in minutes'}
             </p>
           </div>
 

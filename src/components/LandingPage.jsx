@@ -201,7 +201,7 @@ export default function LandingPage({ setView, openAuthModal }) {
               {
                 step: '03',
                 title: 'Share with Anyone',
-                desc: 'Share unlimited times via WhatsApp, QR code, NFC tap, or custom business URL (e.g. desicard.in/your-brand).',
+                desc: 'Share unlimited times via WhatsApp, QR code, NFC tap, or custom business URL (e.g. digicards-app.pages.dev/card/your-brand).',
                 icon: Share2,
                 color: 'from-purple-500 to-pink-600'
               }
@@ -427,7 +427,7 @@ export default function LandingPage({ setView, openAuthModal }) {
 
       {/* Floating WhatsApp Chat Widget matching video frame_010s */}
       <a
-        href="https://wa.me/917367063161?text=Hello%20DesiCard%20Team,%20I%20am%20interested%20in%20the%20Digital%20Business%20Card%20Platform"
+        href="https://wa.me/917367063161?text=Hello%20DigiCards%20Team,%20I%20am%20interested%20in%20the%20Digital%20Business%20Card%20Platform"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-2xl shadow-emerald-600/40 hover:scale-110 transition-transform"

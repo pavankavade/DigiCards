@@ -109,7 +109,7 @@ export default function AdminDashboard({ currentUser, setView, onEditCard, onLog
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-black tracking-wider text-slate-900">ADMIN</h1>
             <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-bold">
-              DesiCard Central Management
+              DigiCards Central Management
             </span>
           </div>
 

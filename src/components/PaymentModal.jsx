@@ -46,10 +46,10 @@ export default function PaymentModal({ isOpen, onClose, card, onSuccess }) {
           </button>
 
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white text-blue-700 font-extrabold text-sm mb-3 shadow-md">
-            DesiCard
+            DigiCards
           </div>
 
-          <div className="text-xs uppercase tracking-widest text-blue-100 font-bold">DESICARD.IN</div>
+          <div className="text-xs uppercase tracking-widest text-blue-100 font-bold">DIGICARDS.IN</div>
           <div className="text-xs text-blue-200 mt-0.5">Total Amount</div>
           <div className="text-3xl font-extrabold mt-1 tracking-tight">₹ 999</div>
 

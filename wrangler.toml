@@ -7,7 +7,7 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "digicards-db"
-database_id = "PLACEHOLDER_D1_DATABASE_ID"
+database_id = "9060c1b7-877c-4a08-a371-01bbf84292b3"
 
 # Cloudflare R2 Bucket binding for image uploads
 # Run 'npx wrangler r2 bucket create digicards-uploads' to create the bucket

@@ -62,24 +62,6 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleQuickLogin = async (identifier, password, expectedRole) => {
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, password, role: expectedRole })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Quick login failed');
-      setCurrentUser(data.user);
-      if (expectedRole === 'admin') setCurrentView('admin');
-      else if (expectedRole === 'franchisee') setCurrentView('franchisee');
-      else setCurrentView('customer');
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     setCurrentUser(null);
@@ -101,7 +83,6 @@ export default function App() {
           currentUser={currentUser}
           onLogout={handleLogout}
           openAuthModal={(mode) => setAuthModal({ open: true, mode })}
-          onQuickLogin={handleQuickLogin}
           theme={theme}
           toggleTheme={toggleTheme}
         />
@@ -119,7 +100,7 @@ export default function App() {
 
         {currentView === 'public-card' && (
           <PublicCardView
-            slug={typeof viewParam === 'object' && viewParam !== null ? viewParam.slug : (viewParam || 'apex-studio')}
+            slug={typeof viewParam === 'object' && viewParam !== null ? viewParam.slug : (viewParam || 'demo')}
             overrideThemeId={typeof viewParam === 'object' && viewParam !== null ? viewParam.themeId : null}
             onBack={() => handleSetView('landing')}
           />

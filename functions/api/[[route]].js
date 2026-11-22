@@ -57,23 +57,87 @@ async function ensureSchema(db) {
     await db.prepare("ALTER TABLE cards ADD COLUMN created_by_user_id INTEGER").run().catch(() => {});
     await db.prepare("ALTER TABLE cards ADD COLUMN layout_template TEXT DEFAULT 'executive'").run().catch(() => {});
 
-    // Ensure demo franchise credentials exist
-    await db.prepare(`
-      UPDATE users 
-      SET franchise_code = COALESCE(franchise_code, 'FRAN-PUNE-8910'),
-          franchise_pin = COALESCE(franchise_pin, '8910'),
-          approval_status = COALESCE(approval_status, 'approved'),
-          card_quota = COALESCE(card_quota, 50)
-      WHERE role = 'franchisee' AND (franchise_code IS NULL OR franchise_pin IS NULL)
-    `).run().catch(() => {});
+    // Clean slate migration: remove legacy demo users and dummy test accounts
+    await db.prepare("DELETE FROM users WHERE email IN ('admin@example.com', 'franchise@example.com', 'user@example.com')").run().catch(() => {});
 
-    // Ensure demo customer code exists
-    await db.prepare(`
-      UPDATE users 
-      SET customer_code = COALESCE(customer_code, 'CUST-ALEX-7712'),
-          approval_status = COALESCE(approval_status, 'approved')
-      WHERE role = 'customer' AND customer_code IS NULL
-    `).run().catch(() => {});
+    // One-time clean slate reset: remove all old test cards, franchises, and customers
+    const cleanCheck = await db.prepare("SELECT value FROM settings WHERE key = 'clean_slate_v2'").first().catch(() => null);
+    if (!cleanCheck) {
+      await db.prepare("DELETE FROM users WHERE email != 'swayamnanaware7@gmail.com'").run().catch(() => {});
+      await db.prepare("DELETE FROM cards WHERE slug NOT IN ('demo', 'apex-studio', 'ABC-Marketing')").run().catch(() => {});
+      await db.prepare("DELETE FROM products WHERE card_id NOT IN (SELECT id FROM cards)").run().catch(() => {});
+      await db.prepare("DELETE FROM gallery WHERE card_id NOT IN (SELECT id FROM cards)").run().catch(() => {});
+      await db.prepare("DELETE FROM enquiries WHERE card_id NOT IN (SELECT id FROM cards)").run().catch(() => {});
+      await db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('clean_slate_v2', 'true')").run().catch(() => {});
+    }
+
+    // Ensure Super Admin exists with approved credentials
+    const adminUser = await db.prepare("SELECT id FROM users WHERE email = 'swayamnanaware7@gmail.com'").first().catch(() => null);
+    let adminId;
+    if (!adminUser) {
+      const insAdmin = await db.prepare(`
+        INSERT INTO users (role, name, email, phone, password, wallet_balance, status, approval_status, card_quota)
+        VALUES ('admin', 'Swayam Nanaware', 'swayamnanaware7@gmail.com', '917367063161', '9UiHJ3cSef76TyHFce2^', 100000, 'active', 'approved', 9999)
+      `).run().catch(() => null);
+      adminId = insAdmin?.meta?.last_row_id;
+    } else {
+      adminId = adminUser.id;
+      await db.prepare(`
+        UPDATE users 
+        SET password = '9UiHJ3cSef76TyHFce2^', role = 'admin', status = 'active', approval_status = 'approved', card_quota = 9999
+        WHERE id = ?
+      `).bind(adminId).run().catch(() => {});
+    }
+
+    // Ensure pristine showcase demo card exists with slug 'demo'
+    const existingDemo = await db.prepare("SELECT id FROM cards WHERE slug = 'demo' OR slug = 'apex-studio' OR slug = 'ABC-Marketing' ORDER BY id ASC LIMIT 1").first().catch(() => null);
+    if (!existingDemo) {
+      const insCard = await db.prepare(`
+        INSERT INTO cards (
+          user_id, created_by_role, slug, company_name, theme_id, layout_template,
+          theme_style, status, payment_status, personal_name, designation, phone,
+          alt_phone, whatsapp, email, address, website, location_map,
+          company_est_date, about_us, logo_url, profile_url, social_facebook,
+          social_twitter, social_instagram, social_linkedin, social_youtube,
+          social_telegram, youtube_video, payment_upi_id, payment_qr_url,
+          bank_name, bank_account_no, bank_ifsc, bank_holder_name, views_count
+        ) VALUES (
+          ?, 'admin', 'demo', 'Apex Digital Studio', 1, 'executive',
+          'theme-1', 'active', 'paid', 'Swayam Nanaware', 'Founder & Director', '917367063161',
+          '917367063161', '917367063161', 'swayamnanaware7@gmail.com', '100 Innovation Boulevard, Tech District',
+          'https://digicards-app.pages.dev', 'https://maps.google.com/?q=Innovation+Park',
+          '2024', 'We engineer next-generation digital identities, interactive visiting cards, and high-performance mini websites.',
+          '/assets/img/demo/logo.png', '/assets/img/demo/profile.jpg',
+          'https://facebook.com', 'https://twitter.com', 'https://instagram.com',
+          'https://linkedin.com', 'https://youtube.com', 'https://t.me',
+          'https://www.youtube.com/watch?v=o6tlSH-dypE', 'swayam@upi',
+          '/assets/img/demo/sample-qr.png', 'HDFC Bank', '50100234567890', 'HDFC0001234',
+          'APEX DIGITAL STUDIO', 0
+        )
+      `).bind(adminId || 1).run().catch(() => null);
+
+      const demoCardId = insCard?.meta?.last_row_id;
+      if (demoCardId) {
+        await db.prepare(`
+          INSERT INTO products (card_id, title, price, discount_price, description, image_url)
+          VALUES (?, 'Custom Digital Visiting Card', 1499, 999, 'Interactive digital card with 100 themes, 1-click vCard export, and WhatsApp integration.', '/assets/img/demo/prod1.png')
+        `).bind(demoCardId).run().catch(() => {});
+        await db.prepare(`
+          INSERT INTO products (card_id, title, price, discount_price, description, image_url)
+          VALUES (?, 'NFC Matte Metal Card', 1999, 1499, 'Matte finish NFC smart business card. Tap any smartphone to share your profile instantly.', '/assets/img/demo/prod2.png')
+        `).bind(demoCardId).run().catch(() => {});
+        await db.prepare(`
+          INSERT INTO gallery (card_id, image_url, caption)
+          VALUES (?, '/assets/img/demo/gallery1.jpg', 'Creative Design Studio')
+        `).bind(demoCardId).run().catch(() => {});
+        await db.prepare(`
+          INSERT INTO gallery (card_id, image_url, caption)
+          VALUES (?, '/assets/img/demo/gallery2.jpg', 'Smart Card Mockups')
+        `).bind(demoCardId).run().catch(() => {});
+      }
+    } else {
+      await db.prepare("UPDATE cards SET slug = 'demo', status = 'active', payment_status = 'paid' WHERE id = ?").bind(existingDemo.id).run().catch(() => {});
+    }
 
     schemaMigrated = true;
   } catch (e) {
@@ -277,7 +341,10 @@ export async function onRequest(context) {
     // GET /api/cards/public/:slug
     if (route[0] === 'cards' && route[1] === 'public' && route[2] && route.length === 3 && method === 'GET') {
       const slug = route[2];
-      const card = await env.DB.prepare('SELECT * FROM cards WHERE slug = ? COLLATE NOCASE').bind(slug).first();
+      let card = await env.DB.prepare('SELECT * FROM cards WHERE slug = ? COLLATE NOCASE').bind(slug).first();
+      if (!card && ['demo', 'apex-studio', 'abc-marketing'].includes(slug.toLowerCase())) {
+        card = await env.DB.prepare("SELECT * FROM cards WHERE slug IN ('demo', 'apex-studio', 'ABC-Marketing') ORDER BY id ASC LIMIT 1").first();
+      }
       if (!card) return json({ error: 'Card not found' }, 404);
 
       await env.DB.prepare('UPDATE cards SET views_count = views_count + 1 WHERE id = ?').bind(card.id).run();
@@ -294,7 +361,10 @@ export async function onRequest(context) {
     if ((route[0] === 'cards' && route[1] === 'public' && route[2] && route[3] === 'vcard' && method === 'GET') ||
         (route[0] === 'cards' && route[1] && route[2] === 'vcard' && method === 'GET')) {
       const slug = route[1] === 'public' ? route[2] : route[1];
-      const card = await env.DB.prepare('SELECT * FROM cards WHERE slug = ? COLLATE NOCASE').bind(slug).first();
+      let card = await env.DB.prepare('SELECT * FROM cards WHERE slug = ? COLLATE NOCASE').bind(slug).first();
+      if (!card && ['demo', 'apex-studio', 'abc-marketing'].includes(slug.toLowerCase())) {
+        card = await env.DB.prepare("SELECT * FROM cards WHERE slug IN ('demo', 'apex-studio', 'ABC-Marketing') ORDER BY id ASC LIMIT 1").first();
+      }
       if (!card) return new Response('Card not found', { status: 404 });
 
       const fullName = card.personal_name || card.company_name;
@@ -480,7 +550,7 @@ export async function onRequest(context) {
         INSERT INTO cards (
           user_id, created_by_user_id, created_by_role, slug, company_name, theme_id, layout_template,
           status, payment_status, phone, email, personal_name, is_self_service
-        ) VALUES (?, NULL, 'direct', ?, ?, ?, ?, 'active', 'paid', ?, ?, ?, 1)
+        ) VALUES (?, NULL, 'direct', ?, ?, ?, ?, 'pending_approval', 'pending', ?, ?, ?, 1)
       `).bind(
         user.id,
         finalSlug,
@@ -493,7 +563,7 @@ export async function onRequest(context) {
       ).run();
 
       const newCard = await env.DB.prepare('SELECT * FROM cards WHERE id = ?').bind(result.meta.last_row_id).first();
-      return json({ message: 'Self-service direct card activated successfully!', card: newCard });
+      return json({ message: 'Self-service card submitted! It is currently pending approval by Super Admin.', card: newCard });
     }
 
     // POST /api/cards/:id/toggle-status
@@ -1064,6 +1134,51 @@ export async function onRequest(context) {
 
       await env.DB.prepare('UPDATE cards SET payment_status = ?, status = ? WHERE id = ?').bind(newPayStatus, newStatus, cardId).run();
       return json({ message: `Card updated to ${newPayStatus} / ${newStatus}`, cardId, payment_status: newPayStatus, status: newStatus });
+    }
+
+    // GET /api/admin/pending-cards
+    if (pathStr === 'admin/pending-cards' && method === 'GET') {
+      const user = await getAuthUser(request, env);
+      if (!user || user.role !== 'admin') return json({ error: 'Admin access required' }, 403);
+
+      const { results: cards } = await env.DB.prepare(`
+        SELECT c.*, u.name as owner_name, u.email as owner_email, u.phone as owner_phone
+        FROM cards c
+        LEFT JOIN users u ON c.user_id = u.id
+        WHERE c.status = 'pending_approval'
+        ORDER BY c.id DESC
+      `).all();
+
+      return json({ cards: cards || [] });
+    }
+
+    // POST /api/admin/cards/:id/approve
+    if (route[0] === 'admin' && route[1] === 'cards' && route[3] === 'approve' && method === 'POST') {
+      const user = await getAuthUser(request, env);
+      if (!user || user.role !== 'admin') return json({ error: 'Admin access required' }, 403);
+
+      const cardId = route[2];
+      const card = await env.DB.prepare('SELECT * FROM cards WHERE id = ?').bind(cardId).first();
+      if (!card) return json({ error: 'Card not found' }, 404);
+
+      await env.DB.prepare("UPDATE cards SET status = 'active', payment_status = 'paid' WHERE id = ?").bind(cardId).run();
+      return json({ message: 'Card approved and activated successfully', cardId });
+    }
+
+    // POST /api/admin/cards/:id/reject
+    if (route[0] === 'admin' && route[1] === 'cards' && route[3] === 'reject' && method === 'POST') {
+      const user = await getAuthUser(request, env);
+      if (!user || user.role !== 'admin') return json({ error: 'Admin access required' }, 403);
+
+      const cardId = route[2];
+      const card = await env.DB.prepare('SELECT * FROM cards WHERE id = ?').bind(cardId).first();
+      if (!card) return json({ error: 'Card not found' }, 404);
+
+      await env.DB.prepare('DELETE FROM products WHERE card_id = ?').bind(cardId).run();
+      await env.DB.prepare('DELETE FROM gallery WHERE card_id = ?').bind(cardId).run();
+      await env.DB.prepare('DELETE FROM enquiries WHERE card_id = ?').bind(cardId).run();
+      await env.DB.prepare('DELETE FROM cards WHERE id = ?').bind(cardId).run();
+      return json({ message: 'Card rejected and removed', cardId });
     }
 
     // ==========================================

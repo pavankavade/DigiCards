@@ -154,7 +154,7 @@ export default function LandingPage({ setView, openAuthModal, theme }) {
               </button>
 
               <button
-                onClick={() => setView('public-card', 'apex-studio')}
+                onClick={() => setView('public-card', 'demo')}
                 className="px-6 py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-800 dark:text-slate-200 font-bold text-sm transition flex items-center gap-2 shadow-xs"
               >
                 <Eye className="w-4 h-4 text-indigo-500" />
@@ -263,7 +263,7 @@ export default function LandingPage({ setView, openAuthModal, theme }) {
 
               <div className="pt-4">
                 <button
-                  onClick={() => setView('public-card', 'apex-studio')}
+                  onClick={() => setView('public-card', 'demo')}
                   className="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs flex items-center gap-2 hover:opacity-90 transition"
                 >
                   <span>Preview This Structure Live</span>
@@ -439,7 +439,7 @@ export default function LandingPage({ setView, openAuthModal, theme }) {
             {filteredThemes.map((t) => (
               <button
                 key={t.id}
-                onClick={() => setView('public-card', 'apex-studio', t.id)}
+                onClick={() => setView('public-card', 'demo', t.id)}
                 className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-left transition hover:scale-102 flex flex-col justify-between h-28 relative overflow-hidden group shadow-xs"
               >
                 <div className="absolute top-0 left-0 right-0 h-8" style={{ background: t.gradient }} />
@@ -559,7 +559,7 @@ export default function LandingPage({ setView, openAuthModal, theme }) {
           </div>
           <p>© 2026 DigiCards SaaS. Built for clean, modern digital business networking.</p>
           <div className="flex items-center gap-4 font-semibold">
-            <button onClick={() => setView('public-card', 'apex-studio')} className="hover:text-slate-900 dark:hover:text-white">Live Demo</button>
+            <button onClick={() => setView('public-card', 'demo')} className="hover:text-slate-900 dark:hover:text-white">Live Demo</button>
             <button onClick={() => openAuthModal('login')} className="hover:text-slate-900 dark:hover:text-white">Login</button>
           </div>
         </div>

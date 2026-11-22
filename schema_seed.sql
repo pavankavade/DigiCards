@@ -7,20 +7,11 @@ INSERT OR IGNORE INTO settings (key, value) VALUES ('razorpay_key', 'rzp_test_12
 INSERT OR IGNORE INTO settings (key, value) VALUES ('razorpay_secret', 'rzp_secret_dummy_12345');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('test_mode', 'true');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('contact_phone', '+91 7367063161');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('contact_email', 'info@desicard.in');
+INSERT OR IGNORE INTO settings (key, value) VALUES ('contact_email', 'swayamnanaware7@gmail.com');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('contact_address', 'Gandhi Maidan, Patna 800001 Bihar, India');
 
 INSERT OR IGNORE INTO users (id, role, name, email, phone, password, wallet_balance, status)
-VALUES (1, 'admin', 'Super Admin', 'admin@example.com', '7367063161', 'admin123', 0, 'active');
-
-INSERT OR IGNORE INTO users (id, role, name, email, phone, password, wallet_balance, status)
-VALUES (2, 'franchisee', 'Patna Reseller Hub', 'franchise@example.com', '9876543210', 'franchise123', 5000, 'active');
-
-INSERT OR IGNORE INTO wallet_transactions (id, user_id, amount, type, comment)
-VALUES (1, 2, 5000, 'credit', 'Initial promotional balance credited by admin');
-
-INSERT OR IGNORE INTO users (id, role, name, email, phone, password, wallet_balance, status)
-VALUES (3, 'customer', 'Irshad Kamil', 'user@example.com', '7367063161', 'user123', 0, 'active');
+VALUES (1, 'admin', 'Swayam Nanaware', 'swayamnanaware7@gmail.com', '7367063161', '9UiHJ3cSef76TyHFce2^', 100000, 'active');
 
 INSERT OR IGNORE INTO cards (
     id, user_id, created_by_role, slug, company_name, theme_id, theme_style,
@@ -32,18 +23,18 @@ INSERT OR IGNORE INTO cards (
     payment_phonepe, payment_upi_id, payment_qr_url, bank_name,
     bank_account_no, bank_ifsc, bank_holder_name, views_count
 ) VALUES (
-    1, 3, 'customer', 'ABC-Marketing', 'ABC MARKETING', 26, 'theme-26',
-    'active', 'paid', 'Irshad Kamil', 'CEO & Founder', '7367063161', '9876543210',
-    '7367063161', 'abcmarketingofficial@gmail.com', 'Gandhi Maidan, Patna, Bihar 800001',
-    'https://desicard.in', 'https://maps.google.com/?q=Patna+Bihar', '2021',
-    'Best Marketing Software & Digital Business Card Provider in Patna. We help entrepreneurs, businesses, and professionals build their high-converting digital identity and mini ecommerce store.',
+    1, 1, 'admin', 'demo', 'Apex Digital Studio', 1, 'theme-1',
+    'active', 'paid', 'Swayam Nanaware', 'Founder & Director', '7367063161', '9876543210',
+    '7367063161', 'swayamnanaware7@gmail.com', '100 Innovation Boulevard, Tech District',
+    'https://digicards-app.pages.dev', 'https://maps.google.com/?q=Patna+Bihar', '2024',
+    'Best Digital Visiting Card Provider. We help entrepreneurs, businesses, and professionals build their high-converting digital identity and mini ecommerce store.',
     '/assets/img/demo/logo.png', '/assets/img/demo/profile.jpg',
     'https://facebook.com', 'https://twitter.com', 'https://instagram.com',
-    'https://linkedin.com', 'https://youtube.com/@ABCMarketing', 'https://pinterest.com',
-    'https://t.me/abcmarketing', 'https://www.youtube.com/watch?v=o6tlSH-dypE',
-    '7367063161', '7367063161', '7367063161', 'abcmarketing@upi',
+    'https://linkedin.com', 'https://youtube.com', 'https://pinterest.com',
+    'https://t.me', 'https://www.youtube.com/watch?v=o6tlSH-dypE',
+    '7367063161', '7367063161', '7367063161', 'swayam@upi',
     '/assets/img/demo/sample-qr.png', 'State Bank of India', '39872145678', 'SBIN0001234',
-    'ABC MARKETING DIGITAL SERVICES', 142
+    'APEX DIGITAL STUDIO', 0
 );
 
 INSERT OR IGNORE INTO products (id, card_id, title, price, discount_price, description, image_url)

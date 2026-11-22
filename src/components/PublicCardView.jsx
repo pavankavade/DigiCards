@@ -48,7 +48,81 @@ const TEMPLATE_METADATA = [
   { id: "nordic", name: "Nordic Minimal", desc: "Scandinavian quiet luxury, titanium accents, calm whitespace", badge: "Clean", icon: Sparkles }
 ];
 
-export default function PublicCardView({ slug = "apex-studio", overrideThemeId, onBack }) {
+const FALLBACK_SHOWCASE_CARD = {
+  id: 1,
+  slug: "demo",
+  company_name: "Apex Studio Digital",
+  theme_id: 26,
+  theme_style: "theme-26",
+  layout_template: "executive",
+  status: "active",
+  payment_status: "paid",
+  personal_name: "Irshad Kamil",
+  designation: "CEO & Founder",
+  phone: "7367063161",
+  alt_phone: "9876543210",
+  whatsapp: "7367063161",
+  email: "contact@apexstudio.io",
+  address: "Cyber City, Phase 2, Pune, Maharashtra 411028",
+  website: "https://digicards-app.pages.dev",
+  location_map: "https://maps.google.com/?q=Pune+Maharashtra",
+  company_est_date: "2022",
+  about_us: "We engineer hyper-converting digital visiting cards, intelligent NFC micro-websites, and modern e-commerce storefronts for elite founders and professionals.",
+  logo_url: "/assets/img/demo/logo.png",
+  profile_url: "/assets/img/demo/profile.jpg",
+  social_facebook: "https://facebook.com",
+  social_twitter: "https://twitter.com",
+  social_instagram: "https://instagram.com",
+  social_linkedin: "https://linkedin.com",
+  social_youtube: "https://youtube.com",
+  social_telegram: "https://t.me/apexstudio",
+  youtube_video: "https://www.youtube.com/watch?v=o6tlSH-dypE",
+  payment_paytm: "7367063161",
+  payment_gpay: "7367063161",
+  payment_phonepe: "7367063161",
+  payment_upi_id: "apexstudio@upi",
+  payment_qr_url: "/assets/img/demo/sample-qr.png",
+  bank_name: "HDFC Bank",
+  bank_account_no: "50200089123456",
+  bank_ifsc: "HDFC0001234",
+  bank_holder_name: "APEX STUDIO DIGITAL SERVICES",
+  views_count: 142
+};
+
+const FALLBACK_PRODUCTS = [
+  {
+    id: 1,
+    title: "NFC Smart Metal Business Card",
+    price: 1499,
+    discount_price: 999,
+    image_url: "/assets/img/demo/prod2.png",
+    description: "Tap and share contact info instantly with any NFC-enabled smartphone. Waterproof and laser-engraved."
+  },
+  {
+    id: 2,
+    title: "Mini E-Commerce Storefront Setup",
+    price: 2999,
+    discount_price: 1499,
+    image_url: "/assets/img/demo/prod3.png",
+    description: "Turn your visiting card into a 24/7 product catalog with instant 1-click WhatsApp order placement."
+  },
+  {
+    id: 3,
+    title: "Custom Domain White-Label SaaS Portal",
+    price: 4999,
+    discount_price: 1999,
+    image_url: "/assets/img/demo/prod1.png",
+    description: "Full multi-tenant reseller ecosystem with 100 themes, custom branding, and franchise management."
+  }
+];
+
+const FALLBACK_GALLERY = [
+  { id: 1, image_url: "/assets/img/demo/gallery1.jpg", caption: "Our Creative Studio & Team" },
+  { id: 2, image_url: "/assets/img/demo/gallery2.jpg", caption: "Digital Visiting Card Mockup Showcase" },
+  { id: 3, image_url: "/assets/img/demo/gallery3.jpg", caption: "Client Networking Summit" }
+];
+
+export default function PublicCardView({ slug = "demo", overrideThemeId, onBack }) {
   const [cardData, setCardData] = useState(null);
   const [products, setProducts] = useState([]);
   const [gallery, setGallery] = useState([]);
@@ -88,8 +162,19 @@ export default function PublicCardView({ slug = "apex-studio", overrideThemeId, 
   const fetchCard = async () => {
     try {
       setLoading(true);
+      setError("");
       const res = await fetch(`/api/cards/public/${slug}`);
-      if (!res.ok) throw new Error("Card not found");
+      if (!res.ok) {
+        if (slug === 'demo' || slug === 'apex-studio' || slug === 'ABC-Marketing' || !slug) {
+          setCardData(FALLBACK_SHOWCASE_CARD);
+          setProducts(FALLBACK_PRODUCTS);
+          setGallery(FALLBACK_GALLERY);
+          setSelectedTemplate(FALLBACK_SHOWCASE_CARD.layout_template);
+          if (!overrideThemeId) setActiveThemeId(FALLBACK_SHOWCASE_CARD.theme_id);
+          return;
+        }
+        throw new Error("Card not found");
+      }
       const data = await res.json();
       setCardData(data.card);
       setProducts(data.products || []);
@@ -102,7 +187,15 @@ export default function PublicCardView({ slug = "apex-studio", overrideThemeId, 
         setActiveThemeId(data.card.theme_id);
       }
     } catch (err) {
-      setError(err.message);
+      if (slug === 'demo' || slug === 'apex-studio' || slug === 'ABC-Marketing' || !slug) {
+        setCardData(FALLBACK_SHOWCASE_CARD);
+        setProducts(FALLBACK_PRODUCTS);
+        setGallery(FALLBACK_GALLERY);
+        setSelectedTemplate(FALLBACK_SHOWCASE_CARD.layout_template);
+        if (!overrideThemeId) setActiveThemeId(FALLBACK_SHOWCASE_CARD.theme_id);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }

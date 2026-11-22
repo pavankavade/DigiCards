@@ -236,7 +236,10 @@ app.post('/api/auth/logout', (req, res) => {
 // Public card lookup by slug
 app.get('/api/cards/public/:slug', (req, res) => {
   const slug = req.params.slug;
-  const card = db.prepare('SELECT * FROM cards WHERE slug = ? COLLATE NOCASE').get(slug);
+  let card = db.prepare('SELECT * FROM cards WHERE slug = ? COLLATE NOCASE').get(slug);
+  if (!card && ['demo', 'apex-studio', 'abc-marketing'].includes(slug.toLowerCase())) {
+    card = db.prepare("SELECT * FROM cards WHERE slug IN ('demo', 'apex-studio', 'ABC-Marketing') ORDER BY id ASC LIMIT 1").get();
+  }
   if (!card) return res.status(404).json({ error: 'Card not found' });
 
   // Increment view counter
@@ -252,7 +255,10 @@ app.get('/api/cards/public/:slug', (req, res) => {
 // vCard (.vcf) download for 1-click Contact Saving
 app.get(['/api/cards/public/:slug/vcard', '/api/cards/:slug/vcard'], (req, res) => {
   const slug = req.params.slug;
-  const card = db.prepare('SELECT * FROM cards WHERE slug = ? COLLATE NOCASE').get(slug);
+  let card = db.prepare('SELECT * FROM cards WHERE slug = ? COLLATE NOCASE').get(slug);
+  if (!card && ['demo', 'apex-studio', 'abc-marketing'].includes(slug.toLowerCase())) {
+    card = db.prepare("SELECT * FROM cards WHERE slug IN ('demo', 'apex-studio', 'ABC-Marketing') ORDER BY id ASC LIMIT 1").get();
+  }
   if (!card) return res.status(404).send('Card not found');
 
   const fullName = card.personal_name || card.company_name;
@@ -446,7 +452,7 @@ app.post('/api/cards/self-service', authMiddleware, (req, res) => {
       INSERT INTO cards (
         user_id, created_by_user_id, created_by_role, slug, company_name, theme_id, layout_template,
         status, payment_status, phone, email, personal_name, is_self_service
-      ) VALUES (?, NULL, 'direct', ?, ?, ?, ?, 'active', 'paid', ?, ?, ?, 1)
+      ) VALUES (?, NULL, 'direct', ?, ?, ?, ?, 'pending_approval', 'pending', ?, ?, ?, 1)
     `).run(
       req.user.id,
       finalSlug,
@@ -459,7 +465,7 @@ app.post('/api/cards/self-service', authMiddleware, (req, res) => {
     );
 
     const newCard = db.prepare('SELECT * FROM cards WHERE id = ?').get(result.lastInsertRowid);
-    res.json({ message: 'Self-service direct card activated successfully!', card: newCard });
+    res.json({ message: 'Self-service card submitted! It is currently pending approval by Super Admin.', card: newCard });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -979,6 +985,44 @@ app.post('/api/admin/cards/:id/payment-status', authMiddleware, (req, res) => {
 
   db.prepare('UPDATE cards SET payment_status = ?, status = ? WHERE id = ?').run(newPayStatus, newStatus, cardId);
   res.json({ message: `Card updated to ${newPayStatus} / ${newStatus}`, cardId, payment_status: newPayStatus, status: newStatus });
+});
+
+// Admin List Pending Cards
+app.get('/api/admin/pending-cards', authMiddleware, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+  const cards = db.prepare(`
+    SELECT c.*, u.name as owner_name, u.email as owner_email, u.phone as owner_phone
+    FROM cards c
+    LEFT JOIN users u ON c.user_id = u.id
+    WHERE c.status = 'pending_approval'
+    ORDER BY c.id DESC
+  `).all();
+  res.json({ cards });
+});
+
+// Admin Approve Self-Service Card
+app.post('/api/admin/cards/:id/approve', authMiddleware, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+  const cardId = req.params.id;
+  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
+  if (!card) return res.status(404).json({ error: 'Card not found' });
+
+  db.prepare("UPDATE cards SET status = 'active', payment_status = 'paid' WHERE id = ?").run(cardId);
+  res.json({ message: 'Card approved and activated successfully', cardId });
+});
+
+// Admin Reject Self-Service Card
+app.post('/api/admin/cards/:id/reject', authMiddleware, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+  const cardId = req.params.id;
+  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
+  if (!card) return res.status(404).json({ error: 'Card not found' });
+
+  db.prepare('DELETE FROM products WHERE card_id = ?').run(cardId);
+  db.prepare('DELETE FROM gallery WHERE card_id = ?').run(cardId);
+  db.prepare('DELETE FROM enquiries WHERE card_id = ?').run(cardId);
+  db.prepare('DELETE FROM cards WHERE id = ?').run(cardId);
+  res.json({ message: 'Card rejected and removed', cardId });
 });
 
 // SPA fallback: Send index.html for frontend routing in production

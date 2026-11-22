@@ -241,11 +241,13 @@ export default function CustomerDashboard({ currentUser, setView, onEditCard, on
                       {/* Payment / Deal Status Badge */}
                       <td className="py-3.5 px-4 text-center">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                          card.payment_status === "paid"
+                          card.status === "pending_approval"
+                            ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
+                            : card.payment_status === "paid"
                             ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
                             : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
                         }`}>
-                          {card.payment_status === "paid" ? "Paid Active" : "Trial Card"}
+                          {card.status === "pending_approval" ? "Pending Approval" : card.payment_status === "paid" ? "Paid Active" : "Trial Card"}
                         </span>
                       </td>
 
@@ -253,14 +255,20 @@ export default function CustomerDashboard({ currentUser, setView, onEditCard, on
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex flex-col items-center">
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase flex items-center gap-1 ${
-                            card.status === "active"
+                            card.status === "pending_approval"
+                              ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
+                              : card.status === "active"
                               ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                               : "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
                           }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${card.status === "active" ? "bg-emerald-500" : "bg-rose-500"}`} />
-                            {card.status === "active" ? "Active" : "Paused"}
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              card.status === "pending_approval" ? "bg-amber-500" : card.status === "active" ? "bg-emerald-500" : "bg-rose-500"
+                            }`} />
+                            {card.status === "pending_approval" ? "Pending Approval" : card.status === "active" ? "Active" : "Paused"}
                           </span>
-                          <span className="text-[9px] text-slate-400 mt-0.5">Managed by Franchise</span>
+                          <span className="text-[9px] text-slate-400 mt-0.5">
+                            {card.is_self_service || !card.created_by_user_id ? "Direct Self-Service (Super Admin)" : "Managed by Franchise"}
+                          </span>
                         </div>
                       </td>
 

@@ -10,8 +10,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
   const [regType, setRegType] = useState('customer'); // 'customer' or 'franchisee'
   
   // Login form fields
-  const [identifier, setIdentifier] = useState('user@example.com');
-  const [password, setPassword] = useState('user123');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
 
   // Register form fields
   const [name, setName] = useState('');
@@ -104,16 +104,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
 
   const setRoleTab = (r) => {
     setSelectedRole(r);
-    if (r === 'admin') {
-      setIdentifier('admin@example.com');
-      setPassword('admin123');
-    } else if (r === 'franchisee') {
-      setIdentifier('franchise@example.com');
-      setPassword('franchise123');
-    } else {
-      setIdentifier('user@example.com');
-      setPassword('user123');
-    }
+    setError('');
   };
 
   return (
@@ -478,9 +469,6 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
                                 />
                               </div>
                             </div>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
-                              Hint: Demo Partner Code: <b className="font-mono text-indigo-600 dark:text-indigo-400">FRAN-PUNE-8910</b> (PIN: 8910)
-                            </span>
                           </div>
                         )}
                       </div>

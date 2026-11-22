@@ -31,7 +31,7 @@ export default function AdminDashboard({ currentUser, setView, onEditCard, onLog
   const [appointSubmitting, setAppointSubmitting] = useState(false);
 
   // Recharge form state (Franchisee modular)
-  const [rechargeEmail, setRechargeEmail] = useState("franchise@example.com");
+  const [rechargeEmail, setRechargeEmail] = useState("");
   const [rechargeAmount, setRechargeAmount] = useState("1000");
   const [rechargeComment, setRechargeComment] = useState("Promotional Amount");
   const [rechargeMsg, setRechargeMsg] = useState("");
@@ -104,6 +104,32 @@ export default function AdminDashboard({ currentUser, setView, onEditCard, onLog
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Rejection failed");
       alert(`Application from ${name} rejected.`);
+      fetchAdminData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // Self-Service Card Approval / Rejection Handlers
+  const handleApproveCard = async (id, name) => {
+    try {
+      const res = await fetch(`/api/admin/cards/${id}/approve`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Approval failed");
+      alert(`✓ Approved and activated self-service card: "${name}"`);
+      fetchAdminData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleRejectCard = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to reject and remove self-service card "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/admin/cards/${id}/reject`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Rejection failed");
+      alert(`Rejected card: "${name}"`);
       fetchAdminData();
     } catch (err) {
       alert(err.message);
@@ -287,12 +313,15 @@ export default function AdminDashboard({ currentUser, setView, onEditCard, onLog
     );
   }
 
+  const pendingCardsCount = cards.filter(c => c.status === "pending_approval").length;
+
   // Filtered cards for deals management
   const filteredCards = cards.filter(c => {
     const matchesSearch = c.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           c.slug?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           c.phone?.includes(searchTerm);
     if (filterStatus === "all") return matchesSearch;
+    if (filterStatus === "pending") return matchesSearch && c.status === "pending_approval";
     if (filterStatus === "trial") return matchesSearch && c.payment_status === "trial";
     if (filterStatus === "paid") return matchesSearch && c.payment_status === "paid";
     if (filterStatus === "active") return matchesSearch && c.status === "active";
@@ -322,7 +351,7 @@ export default function AdminDashboard({ currentUser, setView, onEditCard, onLog
               Public Portal
             </button>
             <span className="opacity-30">|</span>
-            <span className="text-emerald-400 font-mono">👑 {currentUser?.email || "admin@example.com"}</span>
+            <span className="text-emerald-400 font-mono">👑 {currentUser?.email || "swayamnanaware7@gmail.com"}</span>
             <span className="opacity-30">|</span>
             <button onClick={onLogout} className="hover:text-rose-400 flex items-center gap-1 transition">
               <Power className="w-3.5 h-3.5" /> Logout
@@ -342,7 +371,7 @@ export default function AdminDashboard({ currentUser, setView, onEditCard, onLog
             </div>
 
             {[
-              { id: "deals", label: "🤝 Customer Deals & Cards", badge: summary.trialCards ? `${summary.trialCards} Trial` : null, badgeColor: "bg-amber-100 text-amber-800" },
+              { id: "deals", label: "🤝 Customer Deals & Cards", badge: pendingCardsCount ? `${pendingCardsCount} Pending` : (summary.trialCards ? `${summary.trialCards} Trial` : null), badgeColor: pendingCardsCount ? "bg-amber-500 text-white animate-pulse" : "bg-amber-100 text-amber-800" },
               { id: "dashboard", label: "📊 Analytics & Overview", badge: null },
               { id: "users", label: "👥 Customers & Franchise Mapping", badge: `${customers.length}`, badgeColor: "bg-indigo-100 text-indigo-700" },
               { id: "franchisees", label: "💼 Franchise Network & Requests", badge: franchiseRequests.length ? `${franchiseRequests.length} Pending` : `${franchises.length}`, badgeColor: franchiseRequests.length ? "bg-rose-500 text-white animate-pulse" : "bg-purple-100 text-purple-700" },
@@ -383,7 +412,7 @@ export default function AdminDashboard({ currentUser, setView, onEditCard, onLog
 
                     {/* Filter Pills */}
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {["all", "trial", "paid", "active", "deactivated"].map((st) => (
+                      {["all", "pending", "trial", "paid", "active", "deactivated"].map((st) => (
                         <button
                           key={st}
                           onClick={() => setFilterStatus(st)}
@@ -393,11 +422,34 @@ export default function AdminDashboard({ currentUser, setView, onEditCard, onLog
                               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                           }`}
                         >
-                          {st}
+                          {st === "pending" ? `⏳ Pending (${pendingCardsCount})` : st}
                         </button>
                       ))}
                     </div>
                   </div>
+
+                  {/* Pending Self-Service Approval Banner */}
+                  {pendingCardsCount > 0 && (
+                    <div className="mt-4 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                          ⏳
+                        </div>
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wider text-amber-800">Direct Customer Action Required</p>
+                          <p className="text-xs font-semibold text-amber-950">
+                            You have <strong className="font-black text-amber-700">{pendingCardsCount}</strong> self-service card{pendingCardsCount > 1 ? "s" : ""} awaiting your Super Admin approval.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setFilterStatus("pending")}
+                        className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-sm"
+                      >
+                        Filter Pending Cards ({pendingCardsCount})
+                      </button>
+                    </div>
+                  )}
 
                   {/* Search Input */}
                   <div className="mt-4 mb-4">
@@ -464,24 +516,31 @@ export default function AdminDashboard({ currentUser, setView, onEditCard, onLog
                                     ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                                     : "bg-amber-100 text-amber-800 border border-amber-300"
                                 }`}>
-                                  {c.payment_status === "paid" ? "Paid Deal" : "Free Trial"}
+                                  {c.payment_status === "paid" ? "Paid Deal" : (c.status === "pending_approval" ? "Pending Setup" : "Free Trial")}
                                 </span>
                               </td>
 
                               {/* Card Active / Inactive */}
                               <td className="py-3 px-3 text-center">
-                                <button
-                                  onClick={() => handleToggleCardStatus(c.id)}
-                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition flex items-center gap-1 mx-auto ${
-                                    c.status === "active"
-                                      ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                                      : "bg-rose-50 text-rose-700 hover:bg-rose-100"
-                                  }`}
-                                  title="Click to toggle status"
-                                >
-                                  <span className={`w-1.5 h-1.5 rounded-full ${c.status === "active" ? "bg-emerald-500" : "bg-rose-500"}`} />
-                                  {c.status === "active" ? "Active" : "Paused"}
-                                </button>
+                                {c.status === "pending_approval" ? (
+                                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1 mx-auto shadow-sm">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                    Pending Approval
+                                  </span>
+                                ) : (
+                                  <button
+                                    onClick={() => handleToggleCardStatus(c.id)}
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition flex items-center gap-1 mx-auto ${
+                                      c.status === "active"
+                                        ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                        : "bg-rose-50 text-rose-700 hover:bg-rose-100"
+                                    }`}
+                                    title="Click to toggle status"
+                                  >
+                                    <span className={`w-1.5 h-1.5 rounded-full ${c.status === "active" ? "bg-emerald-500" : "bg-rose-500"}`} />
+                                    {c.status === "active" ? "Active" : "Paused"}
+                                  </button>
+                                )}
                               </td>
 
                               <td className="py-3 px-3 text-center font-bold text-slate-700">
@@ -491,36 +550,58 @@ export default function AdminDashboard({ currentUser, setView, onEditCard, onLog
                               {/* Direct Deal Actions */}
                               <td className="py-3 px-3 text-center">
                                 <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                  {/* WhatsApp Deal Closing Button */}
-                                  {c.phone && (
-                                    <a
-                                      href={`https://api.whatsapp.com/send?phone=${c.phone.replace(/[^0-9]/g, "").length === 10 ? "91" + c.phone.replace(/[^0-9]/g, "") : c.phone.replace(/[^0-9]/g, "")}&text=${encodeURIComponent(`Hello ${c.personal_name || c.company_name}, this is DigiCards Super Admin regarding your digital visiting card (${c.company_name}). I am happy to help you activate your 1-year premium deal!`)}`}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="p-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition"
-                                      title="Chat with Customer on WhatsApp to Close Deal"
-                                    >
-                                      <MessageSquare className="w-3.5 h-3.5" />
-                                    </a>
-                                  )}
-
-                                  {/* Toggle Paid / Trial Deal */}
-                                  {c.payment_status !== "paid" ? (
-                                    <button
-                                      onClick={() => handleUpdatePaymentStatus(c.id, "paid", "active")}
-                                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px] shadow transition"
-                                      title="Mark as Paid & Activate (1 Year)"
-                                    >
-                                      Approve Deal
-                                    </button>
+                                  {/* Pending Approval 1-Click Actions */}
+                                  {c.status === "pending_approval" ? (
+                                    <>
+                                      <button
+                                        onClick={() => handleApproveCard(c.id, c.company_name)}
+                                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px] shadow transition flex items-center gap-1"
+                                        title="Approve & Activate Card"
+                                      >
+                                        <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                                      </button>
+                                      <button
+                                        onClick={() => handleRejectCard(c.id, c.company_name)}
+                                        className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[10px] transition"
+                                        title="Reject & Remove"
+                                      >
+                                        Reject
+                                      </button>
+                                    </>
                                   ) : (
-                                    <button
-                                      onClick={() => handleUpdatePaymentStatus(c.id, "trial", "active")}
-                                      className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[10px] transition"
-                                      title="Revert to Trial"
-                                    >
-                                      Set Trial
-                                    </button>
+                                    <>
+                                      {/* WhatsApp Deal Closing Button */}
+                                      {c.phone && (
+                                        <a
+                                          href={`https://api.whatsapp.com/send?phone=${c.phone.replace(/[^0-9]/g, "").length === 10 ? "91" + c.phone.replace(/[^0-9]/g, "") : c.phone.replace(/[^0-9]/g, "")}&text=${encodeURIComponent(`Hello ${c.personal_name || c.company_name}, this is DigiCards Super Admin regarding your digital visiting card (${c.company_name}). I am happy to help you activate your 1-year premium deal!`)}`}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="p-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition"
+                                          title="Chat with Customer on WhatsApp to Close Deal"
+                                        >
+                                          <MessageSquare className="w-3.5 h-3.5" />
+                                        </a>
+                                      )}
+
+                                      {/* Toggle Paid / Trial Deal */}
+                                      {c.payment_status !== "paid" ? (
+                                        <button
+                                          onClick={() => handleUpdatePaymentStatus(c.id, "paid", "active")}
+                                          className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px] shadow transition"
+                                          title="Mark as Paid & Activate (1 Year)"
+                                        >
+                                          Approve Deal
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleUpdatePaymentStatus(c.id, "trial", "active")}
+                                          className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[10px] transition"
+                                          title="Revert to Trial"
+                                        >
+                                          Set Trial
+                                        </button>
+                                      )}
+                                    </>
                                   )}
 
                                   {/* Edit Card */}

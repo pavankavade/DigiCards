@@ -169,22 +169,39 @@ function initDatabase() {
         db.exec("ALTER TABLE cards ADD COLUMN is_self_service INTEGER DEFAULT 0;");
     } catch (e) {}
 
-    // Ensure demo franchise has codes
+    // Clean slate migration: remove legacy demo users
     try {
-        db.prepare(`
-            UPDATE users 
-            SET franchise_code = COALESCE(franchise_code, 'FRAN-PUNE-8910'),
-                franchise_pin = COALESCE(franchise_pin, '8910'),
-                approval_status = 'approved'
-            WHERE role = 'franchisee' AND email = 'franchise@example.com'
-        `).run();
+        db.prepare("DELETE FROM users WHERE email IN ('admin@example.com', 'franchise@example.com', 'user@example.com')").run();
+    } catch (e) {}
 
-        db.prepare(`
-            UPDATE users 
-            SET customer_code = COALESCE(customer_code, 'CUST-ALEX-7712'),
-                approval_status = 'approved'
-            WHERE role = 'customer' AND email = 'user@example.com'
-        `).run();
+    // One-time clean slate reset: remove all old test cards, franchises, and customers
+    try {
+        const cleanCheck = db.prepare("SELECT value FROM settings WHERE key = 'clean_slate_v2'").get();
+        if (!cleanCheck) {
+            db.prepare("DELETE FROM users WHERE email != 'swayamnanaware7@gmail.com'").run();
+            db.prepare("DELETE FROM cards WHERE slug NOT IN ('demo', 'apex-studio', 'ABC-Marketing')").run();
+            db.prepare("DELETE FROM products WHERE card_id NOT IN (SELECT id FROM cards)").run();
+            db.prepare("DELETE FROM gallery WHERE card_id NOT IN (SELECT id FROM cards)").run();
+            db.prepare("DELETE FROM enquiries WHERE card_id NOT IN (SELECT id FROM cards)").run();
+            db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('clean_slate_v2', 'true')").run();
+        }
+    } catch (e) {}
+
+    // Ensure Super Admin exists with approved credentials
+    try {
+        const adminUser = db.prepare("SELECT id FROM users WHERE email = 'swayamnanaware7@gmail.com'").get();
+        if (!adminUser) {
+            db.prepare(`
+                INSERT INTO users (role, name, email, phone, password, wallet_balance, status, approval_status, card_quota)
+                VALUES ('admin', 'Swayam Nanaware', 'swayamnanaware7@gmail.com', '917367063161', '9UiHJ3cSef76TyHFce2^', 100000, 'active', 'approved', 9999)
+            `).run();
+        } else {
+            db.prepare(`
+                UPDATE users 
+                SET password = '9UiHJ3cSef76TyHFce2^', role = 'admin', status = 'active', approval_status = 'approved', card_quota = 9999
+                WHERE email = 'swayamnanaware7@gmail.com'
+            `).run();
+        }
     } catch (e) {}
 
     // Seed default settings if empty
@@ -194,36 +211,17 @@ function initDatabase() {
         insertSetting.run("card_price", "999");
         insertSetting.run("franchise_card_price", "150");
         insertSetting.run("site_name", "DigiCards");
-        insertSetting.run("contact_email", "support@digicards.com");
+        insertSetting.run("contact_email", "swayamnanaware7@gmail.com");
         insertSetting.run("admin_whatsapp", "917367063161");
         insertSetting.run("trial_days", "7");
     }
 
-    // Seed clean initial users and starter card if empty
-    const usersCount = db.prepare("SELECT count(*) as c FROM users").get().c;
-    if (usersCount === 0) {
-        console.log("Seeding clean initial users and fresh card starting at 0 views...");
+    // Ensure pristine showcase demo card exists with slug 'demo'
+    const demoCard = db.prepare("SELECT id FROM cards WHERE slug = 'demo' OR slug = 'apex-studio' OR slug = 'ABC-Marketing'").get();
+    if (!demoCard) {
+        const admin = db.prepare("SELECT id FROM users WHERE email = 'swayamnanaware7@gmail.com'").get();
+        const adminId = admin ? admin.id : 1;
 
-        // 1. Super Admin
-        db.prepare(`
-            INSERT INTO users (role, name, email, phone, password, wallet_balance, status)
-            VALUES ('admin', 'Super Admin', 'admin@example.com', '917367063161', 'admin123', 100000, 'active')
-        `).run();
-
-        // 2. Franchisee (Modular)
-        db.prepare(`
-            INSERT INTO users (role, name, email, phone, password, wallet_balance, status)
-            VALUES ('franchisee', 'Franchise Partner', 'franchise@example.com', '9876543210', 'franchise123', 5000, 'active')
-        `).run();
-
-        // 3. Customer User
-        const customerRes = db.prepare(`
-            INSERT INTO users (role, name, email, phone, password, wallet_balance, status)
-            VALUES ('customer', 'Alex Morgan', 'user@example.com', '9876543210', 'user123', 0, 'active')
-        `).run();
-        const customerId = customerRes.lastInsertRowid;
-
-        // Fresh Starter Card with 0 VIEWS
         const cardRes = db.prepare(`
             INSERT INTO cards (
                 user_id, created_by_role, slug, company_name, theme_id, layout_template,
@@ -234,23 +232,22 @@ function initDatabase() {
                 social_telegram, youtube_video, payment_upi_id, payment_qr_url,
                 bank_name, bank_account_no, bank_ifsc, bank_holder_name, views_count
             ) VALUES (
-                ?, 'customer', 'apex-studio', 'Apex Digital Studio', 1, 'executive',
-                'theme-1', 'active', 'paid', 'Alex Morgan', 'Creative Director', '9876543210',
-                '9876543211', '9876543210', 'contact@apexstudio.com', '100 Innovation Boulevard, Tech District',
-                'https://apexstudio.com', 'https://maps.google.com/?q=Innovation+Park',
+                ?, 'admin', 'demo', 'Apex Digital Studio', 1, 'executive',
+                'theme-1', 'active', 'paid', 'Swayam Nanaware', 'Founder & Director', '917367063161',
+                '917367063161', '917367063161', 'swayamnanaware7@gmail.com', '100 Innovation Boulevard, Tech District',
+                'https://digicards-app.pages.dev', 'https://maps.google.com/?q=Innovation+Park',
                 '2024', 'We engineer next-generation digital identities, interactive visiting cards, and high-performance mini websites.',
                 '/assets/img/demo/logo.png', '/assets/img/demo/profile.jpg',
                 'https://facebook.com', 'https://twitter.com', 'https://instagram.com',
                 'https://linkedin.com', 'https://youtube.com', 'https://t.me',
-                'https://www.youtube.com/watch?v=o6tlSH-dypE', 'apexstudio@upi',
+                'https://www.youtube.com/watch?v=o6tlSH-dypE', 'swayam@upi',
                 '/assets/img/demo/sample-qr.png', 'HDFC Bank', '50100234567890', 'HDFC0001234',
                 'APEX DIGITAL STUDIO', 0
             )
-        `).run(customerId);
+        `).run(adminId);
 
         const cardId = cardRes.lastInsertRowid;
 
-        // Sample products
         const insertProduct = db.prepare(`
             INSERT INTO products (card_id, title, price, discount_price, description, image_url)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -259,11 +256,12 @@ function initDatabase() {
         insertProduct.run(cardId, "NFC Matte Metal Card", 1999, 1499, "Matte finish NFC smart business card. Tap any smartphone to share your profile instantly.", "/assets/img/demo/prod2.png");
         insertProduct.run(cardId, "Mini Website & E-Commerce Store", 3999, 2499, "Complete mini website with product catalog and WhatsApp 1-click ordering.", "/assets/img/demo/prod3.png");
 
-        // Sample gallery
         const insertGallery = db.prepare("INSERT INTO gallery (card_id, image_url, caption) VALUES (?, ?, ?)");
         insertGallery.run(cardId, "/assets/img/demo/gallery1.jpg", "Creative Design Studio");
         insertGallery.run(cardId, "/assets/img/demo/gallery2.jpg", "Smart Card Mockups");
         insertGallery.run(cardId, "/assets/img/demo/gallery3.jpg", "Client Networking Event");
+    } else {
+        db.prepare("UPDATE cards SET slug = 'demo', status = 'active', payment_status = 'paid' WHERE id = ?").run(demoCard.id);
     }
 }
 

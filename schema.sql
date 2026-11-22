@@ -9,6 +9,12 @@ CREATE TABLE IF NOT EXISTS users (
     phone TEXT,
     password TEXT NOT NULL,
     wallet_balance REAL DEFAULT 0,
+    card_quota INTEGER DEFAULT 50,
+    customer_code TEXT,
+    franchise_code TEXT,
+    franchise_pin TEXT,
+    franchise_id INTEGER,
+    approval_status TEXT DEFAULT 'approved',
     status TEXT DEFAULT 'active',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -17,11 +23,14 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS cards (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
+    created_by_user_id INTEGER,
     created_by_role TEXT DEFAULT 'customer',
+    is_self_service INTEGER DEFAULT 0,
     slug TEXT UNIQUE NOT NULL,
     company_name TEXT NOT NULL,
     theme_id INTEGER DEFAULT 1,
     theme_style TEXT DEFAULT 'theme-1',
+    layout_template TEXT DEFAULT 'executive',
     status TEXT DEFAULT 'active',
     payment_status TEXT DEFAULT 'trial',
     personal_name TEXT,
@@ -125,21 +134,21 @@ INSERT OR IGNORE INTO settings (key, value) VALUES ('contact_email', 'info@desic
 INSERT OR IGNORE INTO settings (key, value) VALUES ('contact_address', 'Gandhi Maidan, Patna 800001 Bihar, India');
 
 -- Seed Default Users
-INSERT OR IGNORE INTO users (id, role, name, email, phone, password, wallet_balance, status)
-VALUES (1, 'admin', 'Super Admin', 'admin@example.com', '7367063161', 'admin123', 0, 'active');
+INSERT OR IGNORE INTO users (id, role, name, email, phone, password, wallet_balance, card_quota, status, approval_status)
+VALUES (1, 'admin', 'Super Admin', 'admin@example.com', '7367063161', 'admin123', 0, 9999, 'active', 'approved');
 
-INSERT OR IGNORE INTO users (id, role, name, email, phone, password, wallet_balance, status)
-VALUES (2, 'franchisee', 'Patna Reseller Hub', 'franchise@example.com', '9876543210', 'franchise123', 5000, 'active');
+INSERT OR IGNORE INTO users (id, role, name, email, phone, password, wallet_balance, card_quota, franchise_code, franchise_pin, status, approval_status)
+VALUES (2, 'franchisee', 'Patna Reseller Hub', 'franchise@example.com', '9876543210', 'franchise123', 5000, 50, 'FRAN-PUNE-8910', '8910', 'active', 'approved');
 
 INSERT OR IGNORE INTO wallet_transactions (id, user_id, amount, type, comment)
 VALUES (1, 2, 5000, 'credit', 'Initial promotional balance credited by admin');
 
-INSERT OR IGNORE INTO users (id, role, name, email, phone, password, wallet_balance, status)
-VALUES (3, 'customer', 'Irshad Kamil', 'user@example.com', '7367063161', 'user123', 0, 'active');
+INSERT OR IGNORE INTO users (id, role, name, email, phone, password, wallet_balance, customer_code, franchise_id, status, approval_status)
+VALUES (3, 'customer', 'Irshad Kamil', 'user@example.com', '7367063161', 'user123', 0, 'CUST-ALEX-7712', 2, 'active', 'approved');
 
 -- Seed Demo Card 'ABC MARKETING'
 INSERT OR IGNORE INTO cards (
-    id, user_id, created_by_role, slug, company_name, theme_id, theme_style,
+    id, user_id, created_by_user_id, created_by_role, slug, company_name, theme_id, theme_style, layout_template,
     status, payment_status, personal_name, designation, phone, alt_phone,
     whatsapp, email, address, website, location_map, company_est_date,
     about_us, logo_url, profile_url, social_facebook, social_twitter,
@@ -148,7 +157,7 @@ INSERT OR IGNORE INTO cards (
     payment_phonepe, payment_upi_id, payment_qr_url, bank_name,
     bank_account_no, bank_ifsc, bank_holder_name, views_count
 ) VALUES (
-    1, 3, 'customer', 'ABC-Marketing', 'ABC MARKETING', 26, 'theme-26',
+    1, 3, 2, 'franchisee', 'ABC-Marketing', 'ABC MARKETING', 26, 'theme-26', 'executive',
     'active', 'paid', 'Irshad Kamil', 'CEO & Founder', '7367063161', '9876543210',
     '7367063161', 'abcmarketingofficial@gmail.com', 'Gandhi Maidan, Patna, Bihar 800001',
     'https://desicard.in', 'https://maps.google.com/?q=Patna+Bihar', '2021',

@@ -1,13 +1,13 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+const Database = require("better-sqlite3");
+const path = require("path");
+const fs = require("fs");
 
-const dbPath = path.join(__dirname, 'database.sqlite');
+const dbPath = path.join(__dirname, "database.sqlite");
 const db = new Database(dbPath);
 
 // Enable foreign keys and WAL mode for high performance
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+db.pragma("journal_mode = WAL");
+db.pragma("foreign_keys = ON");
 
 function initDatabase() {
     // 1. Users table
@@ -25,7 +25,7 @@ function initDatabase() {
         );
     `);
 
-    // 2. Cards table
+    // 2. Cards table with layout_template
     db.exec(`
         CREATE TABLE IF NOT EXISTS cards (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,6 +34,7 @@ function initDatabase() {
             slug TEXT UNIQUE NOT NULL,
             company_name TEXT NOT NULL,
             theme_id INTEGER DEFAULT 1,
+            layout_template TEXT DEFAULT 'executive',
             theme_style TEXT DEFAULT 'theme-1',
             status TEXT DEFAULT 'active',
             payment_status TEXT DEFAULT 'trial',
@@ -79,16 +80,16 @@ function initDatabase() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             card_id INTEGER NOT NULL,
             title TEXT NOT NULL,
-            price REAL DEFAULT 0,
-            discount_price REAL DEFAULT 0,
-            image_url TEXT,
+            price REAL NOT NULL,
+            discount_price REAL,
             description TEXT,
+            image_url TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE
         );
     `);
 
-    // 4. Image Gallery table
+    // 4. Gallery Images table
     db.exec(`
         CREATE TABLE IF NOT EXISTS gallery (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -114,7 +115,7 @@ function initDatabase() {
         );
     `);
 
-    // 6. Wallet Transactions table
+    // 6. Wallet Transactions table (Modular Franchisee)
     db.exec(`
         CREATE TABLE IF NOT EXISTS wallet_transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,7 +128,7 @@ function initDatabase() {
         );
     `);
 
-    // 7. Settings table
+    // 7. System Settings table
     db.exec(`
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
@@ -135,126 +136,134 @@ function initDatabase() {
         );
     `);
 
-    // Seed default settings
-    const defaultSettings = [
-        ['site_name', 'DesiCard Digital Services'],
-        ['currency', '₹'],
-        ['card_price', '999'],
-        ['franchise_card_price', '150'],
-        ['trial_days', '7'],
-        ['razorpay_key', 'rzp_test_1234567890ABCD'],
-        ['razorpay_secret', 'rzp_secret_dummy_12345'],
-        ['test_mode', 'true'],
-        ['contact_phone', '+91 7367063161'],
-        ['contact_email', 'info@desicard.in'],
-        ['contact_address', 'Gandhi Maidan, Patna 800001 Bihar, India']
-    ];
+    // Safe schema migrations for existing database
+    try {
+        db.exec("ALTER TABLE users ADD COLUMN card_quota INTEGER DEFAULT 50;");
+    } catch (e) {}
 
-    const insertSetting = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
-    for (const [k, v] of defaultSettings) {
-        insertSetting.run(k, v);
+    try {
+        db.exec("ALTER TABLE cards ADD COLUMN created_by_user_id INTEGER;");
+    } catch (e) {}
+
+    try {
+        db.exec("ALTER TABLE users ADD COLUMN franchise_id INTEGER;");
+    } catch (e) {}
+
+    try {
+        db.exec("ALTER TABLE users ADD COLUMN customer_code TEXT;");
+    } catch (e) {}
+
+    try {
+        db.exec("ALTER TABLE users ADD COLUMN franchise_code TEXT;");
+    } catch (e) {}
+
+    try {
+        db.exec("ALTER TABLE users ADD COLUMN franchise_pin TEXT;");
+    } catch (e) {}
+
+    try {
+        db.exec("ALTER TABLE users ADD COLUMN approval_status TEXT DEFAULT 'approved';");
+    } catch (e) {}
+
+    try {
+        db.exec("ALTER TABLE cards ADD COLUMN is_self_service INTEGER DEFAULT 0;");
+    } catch (e) {}
+
+    // Ensure demo franchise has codes
+    try {
+        db.prepare(`
+            UPDATE users 
+            SET franchise_code = COALESCE(franchise_code, 'FRAN-PUNE-8910'),
+                franchise_pin = COALESCE(franchise_pin, '8910'),
+                approval_status = 'approved'
+            WHERE role = 'franchisee' AND email = 'franchise@example.com'
+        `).run();
+
+        db.prepare(`
+            UPDATE users 
+            SET customer_code = COALESCE(customer_code, 'CUST-ALEX-7712'),
+                approval_status = 'approved'
+            WHERE role = 'customer' AND email = 'user@example.com'
+        `).run();
+    } catch (e) {}
+
+    // Seed default settings if empty
+    const settingsCount = db.prepare("SELECT count(*) as c FROM settings").get().c;
+    if (settingsCount === 0) {
+        const insertSetting = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)");
+        insertSetting.run("card_price", "999");
+        insertSetting.run("franchise_card_price", "150");
+        insertSetting.run("site_name", "DigiCards");
+        insertSetting.run("contact_email", "support@digicards.com");
+        insertSetting.run("admin_whatsapp", "917367063161");
+        insertSetting.run("trial_days", "7");
     }
 
-    // Seed default users if empty
-    const userCount = db.prepare(`SELECT COUNT(*) as count FROM users`).get().count;
-    if (userCount === 0) {
-        // 1. Admin
+    // Seed clean initial users and starter card if empty
+    const usersCount = db.prepare("SELECT count(*) as c FROM users").get().c;
+    if (usersCount === 0) {
+        console.log("Seeding clean initial users and fresh card starting at 0 views...");
+
+        // 1. Super Admin
         db.prepare(`
             INSERT INTO users (role, name, email, phone, password, wallet_balance, status)
-            VALUES ('admin', 'Super Admin', 'admin@example.com', '7367063161', 'admin123', 0, 'active')
+            VALUES ('admin', 'Super Admin', 'admin@example.com', '917367063161', 'admin123', 100000, 'active')
         `).run();
 
-        // 2. Franchisee
-        const franchiseRes = db.prepare(`
-            INSERT INTO users (role, name, email, phone, password, wallet_balance, status)
-            VALUES ('franchisee', 'Patna Reseller Hub', 'franchise@example.com', '9876543210', 'franchise123', 5000, 'active')
-        `).run();
-
+        // 2. Franchisee (Modular)
         db.prepare(`
-            INSERT INTO wallet_transactions (user_id, amount, type, comment)
-            VALUES (?, 5000, 'credit', 'Initial promotional balance credited by admin')
-        `).run(franchiseRes.lastInsertRowid);
+            INSERT INTO users (role, name, email, phone, password, wallet_balance, status)
+            VALUES ('franchisee', 'Franchise Partner', 'franchise@example.com', '9876543210', 'franchise123', 5000, 'active')
+        `).run();
 
         // 3. Customer User
         const customerRes = db.prepare(`
             INSERT INTO users (role, name, email, phone, password, wallet_balance, status)
-            VALUES ('customer', 'Irshad Kamil', 'user@example.com', '7367063161', 'user123', 0, 'active')
+            VALUES ('customer', 'Alex Morgan', 'user@example.com', '9876543210', 'user123', 0, 'active')
         `).run();
-
         const customerId = customerRes.lastInsertRowid;
 
-        // Seed the exact "ABC Marketing" card shown in the video!
+        // Fresh Starter Card with 0 VIEWS
         const cardRes = db.prepare(`
             INSERT INTO cards (
-                user_id, created_by_role, slug, company_name, theme_id, theme_style,
-                status, payment_status, personal_name, designation, phone, alt_phone,
-                whatsapp, email, address, website, location_map, company_est_date,
-                about_us, logo_url, profile_url, social_facebook, social_twitter,
-                social_instagram, social_linkedin, social_youtube, social_pinterest,
-                social_telegram, youtube_video, payment_paytm, payment_gpay,
-                payment_phonepe, payment_upi_id, payment_qr_url, bank_name,
-                bank_account_no, bank_ifsc, bank_holder_name, views_count
+                user_id, created_by_role, slug, company_name, theme_id, layout_template,
+                theme_style, status, payment_status, personal_name, designation, phone,
+                alt_phone, whatsapp, email, address, website, location_map,
+                company_est_date, about_us, logo_url, profile_url, social_facebook,
+                social_twitter, social_instagram, social_linkedin, social_youtube,
+                social_telegram, youtube_video, payment_upi_id, payment_qr_url,
+                bank_name, bank_account_no, bank_ifsc, bank_holder_name, views_count
             ) VALUES (
-                ?, 'customer', 'ABC-Marketing', 'ABC MARKETING', 26, 'theme-26',
-                'active', 'paid', 'Irshad Kamil', 'CEO & Founder', '7367063161', '9876543210',
-                '7367063161', 'abcmarketingofficial@gmail.com', 'Gandhi Maidan, Patna, Bihar 800001',
-                'https://desicard.in', 'https://maps.google.com/?q=Patna+Bihar', '2021',
-                'Best Marketing Software & Digital Business Card Provider in Patna. We help entrepreneurs, businesses, and professionals build their high-converting digital identity and mini ecommerce store.',
+                ?, 'customer', 'apex-studio', 'Apex Digital Studio', 1, 'executive',
+                'theme-1', 'active', 'paid', 'Alex Morgan', 'Creative Director', '9876543210',
+                '9876543211', '9876543210', 'contact@apexstudio.com', '100 Innovation Boulevard, Tech District',
+                'https://apexstudio.com', 'https://maps.google.com/?q=Innovation+Park',
+                '2024', 'We engineer next-generation digital identities, interactive visiting cards, and high-performance mini websites.',
                 '/assets/img/demo/logo.png', '/assets/img/demo/profile.jpg',
                 'https://facebook.com', 'https://twitter.com', 'https://instagram.com',
-                'https://linkedin.com', 'https://youtube.com/@ABCMarketing', 'https://pinterest.com',
-                'https://t.me/abcmarketing', 'https://www.youtube.com/watch?v=o6tlSH-dypE',
-                '7367063161', '7367063161', '7367063161', 'abcmarketing@upi',
-                '/assets/img/demo/sample-qr.png', 'State Bank of India', '39872145678', 'SBIN0001234',
-                'ABC MARKETING DIGITAL SERVICES', 142
+                'https://linkedin.com', 'https://youtube.com', 'https://t.me',
+                'https://www.youtube.com/watch?v=o6tlSH-dypE', 'apexstudio@upi',
+                '/assets/img/demo/sample-qr.png', 'HDFC Bank', '50100234567890', 'HDFC0001234',
+                'APEX DIGITAL STUDIO', 0
             )
         `).run(customerId);
 
         const cardId = cardRes.lastInsertRowid;
 
-        // Seed products for ABC Marketing
+        // Sample products
         const insertProduct = db.prepare(`
             INSERT INTO products (card_id, title, price, discount_price, description, image_url)
             VALUES (?, ?, ?, ?, ?, ?)
         `);
+        insertProduct.run(cardId, "Custom Digital Visiting Card", 1499, 999, "Interactive digital card with 100 themes, 1-click vCard export, and WhatsApp integration.", "/assets/img/demo/prod1.png");
+        insertProduct.run(cardId, "NFC Matte Metal Card", 1999, 1499, "Matte finish NFC smart business card. Tap any smartphone to share your profile instantly.", "/assets/img/demo/prod2.png");
+        insertProduct.run(cardId, "Mini Website & E-Commerce Store", 3999, 2499, "Complete mini website with product catalog and WhatsApp 1-click ordering.", "/assets/img/demo/prod3.png");
 
-        insertProduct.run(
-            cardId,
-            'Digital Business Card Portal Source Code',
-            4999,
-            1999,
-            'Complete PHP/Node source code with 100 themes, Franchisee module, Admin portal, and Razorpay integration.',
-            '/assets/img/demo/prod1.png'
-        );
-
-        insertProduct.run(
-            cardId,
-            'NFC Smart Metal Business Card',
-            1499,
-            999,
-            'Tap and share contact info instantly with any NFC-enabled smartphone. Waterproof and engraved.',
-            '/assets/img/demo/prod2.png'
-        );
-
-        insertProduct.run(
-            cardId,
-            'Mini E-commerce Store Setup',
-            2999,
-            1499,
-            'Turn your digital visiting card into a 24/7 product catalog with instant 1-click WhatsApp order placement.',
-            '/assets/img/demo/prod3.png'
-        );
-
-        // Seed sample gallery
-        const insertGallery = db.prepare(`INSERT INTO gallery (card_id, image_url, caption) VALUES (?, ?, ?)`);
-        insertGallery.run(cardId, '/assets/img/demo/gallery1.jpg', 'Our Creative Studio & Team');
-        insertGallery.run(cardId, '/assets/img/demo/gallery2.jpg', 'Digital Visiting Card Mockup Showcase');
-        insertGallery.run(cardId, '/assets/img/demo/gallery3.jpg', 'Client Networking Event 2026');
-
-        // Seed sample enquiries
-        const insertEnquiry = db.prepare(`INSERT INTO enquiries (card_id, name, phone, email, message) VALUES (?, ?, ?, ?, ?)`);
-        insertEnquiry.run(cardId, 'Rajesh Kumar', '9812345678', 'rajesh@example.com', 'Interested in setting up 15 digital cards for my sales team.');
-        insertEnquiry.run(cardId, 'Pooja Verma', '9876501234', 'pooja@example.com', 'Can you also provide NFC smart cards with my custom branding?');
+        // Sample gallery
+        const insertGallery = db.prepare("INSERT INTO gallery (card_id, image_url, caption) VALUES (?, ?, ?)");
+        insertGallery.run(cardId, "/assets/img/demo/gallery1.jpg", "Creative Design Studio");
+        insertGallery.run(cardId, "/assets/img/demo/gallery2.jpg", "Smart Card Mockups");
+        insertGallery.run(cardId, "/assets/img/demo/gallery3.jpg", "Client Networking Event");
     }
 }
 

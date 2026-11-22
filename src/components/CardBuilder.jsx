@@ -2,15 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, Check, Sparkles, Image as ImageIcon, Save, Eye,
   Phone, MessageSquare, Mail, Globe, MapPin, Plus, Trash2,
-  Video, CreditCard, ShoppingBag, Layers, Upload, ExternalLink
+  Video, CreditCard, ShoppingBag, Layers, Upload, ExternalLink,
+  Cpu, Zap, Smartphone, Crown, LayoutGrid, Feather
 } from 'lucide-react';
-import { THEMES, getThemeById } from '../themes';
+import { THEMES, THEME_CATEGORIES, getThemeById } from '../themes';
+
+const STRUCTURE_OPTIONS = [
+  { id: 'executive', name: 'Executive', desc: 'Curved wave cover, floating badge, glass dock', badge: 'Signature', icon: Sparkles },
+  { id: 'editorial', name: 'Editorial', desc: 'Clean magazine typography, monochrome layout', badge: 'Minimalist', icon: Layers },
+  { id: 'cyber', name: 'Cyber HUD', desc: 'High-tech terminal, neon border glow, telemetry', badge: 'Futuristic', icon: Cpu },
+  { id: 'split', name: 'Dynamic Split', desc: 'Diagonal split cover, modern pill cards', badge: 'Modern', icon: Zap },
+  { id: 'compact', name: 'Compact Bio', desc: 'iOS Bento style with expandable accordion drawers', badge: 'Linktree', icon: Smartphone },
+  { id: 'royale', name: 'Imperial Royale', desc: 'Gold gilded accents, Roman serif, velvet luxury crest', badge: 'Ultra Luxury', icon: Crown },
+  { id: 'neoglass', name: 'NeoGlass Prism', desc: '3D frosted glass, aurora reflections, specular depth', badge: 'Glassmorphism', icon: Sparkles },
+  { id: 'bento', name: 'Bento Grid', desc: 'Modular asymmetric tiles, Apple & Linear inspired', badge: 'Structured', icon: LayoutGrid },
+  { id: 'brutalist', name: 'Neo-Brutalist', desc: '3px bold black borders, vibrant pop, retro shadows', badge: 'High Impact', icon: Zap },
+  { id: 'nordic', name: 'Nordic Minimal', desc: 'Scandinavian quiet luxury, titanium accents, calm whitespace', badge: 'Clean', icon: Feather }
+];
 
 export default function CardBuilder({ cardId, onBack, onViewPublicCard }) {
   const [card, setCard] = useState(null);
   const [products, setProducts] = useState([]);
   const [gallery, setGallery] = useState([]);
   const [activeTab, setActiveTab] = useState('theme'); // 'theme', 'company', 'social', 'payment', 'products', 'gallery'
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -226,21 +241,87 @@ export default function CardBuilder({ cardId, onBack, onViewPublicCard }) {
           {/* Left: Form Area */}
           <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200 space-y-6">
             
-            {/* TAB 1: 100 THEMES SELECTOR matching frame_050s & frame_059s */}
+            {/* TAB 1: CARD STRUCTURE & 100 THEMES SELECTOR */}
             {activeTab === 'theme' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900">Select Theme for your card</h3>
-                    <p className="text-xs text-slate-500">Choose from 100 high-converting modern themes</p>
+              <div className="space-y-6">
+                {/* 1. CARD STRUCTURE SELECTION */}
+                <div className="space-y-3 pb-5 border-b border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-black text-slate-900">1. Select Card Architecture</h3>
+                      <p className="text-xs text-slate-500">Choose between 10 fundamentally distinct layout structures</p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold capitalize">
+                      {card.layout_template || 'executive'} Layout
+                    </span>
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
-                    Theme {card.theme_id || 26} Active
-                  </span>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                    {STRUCTURE_OPTIONS.map((struc) => {
+                      const isSelected = (card.layout_template || 'executive') === struc.id;
+                      const Icon = struc.icon;
+                      return (
+                        <button
+                          key={struc.id}
+                          type="button"
+                          onClick={() => handleUpdateField('layout_template', struc.id)}
+                          className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between ${
+                            isSelected
+                              ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20 shadow-xs'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                            </div>
+                            <h4 className="text-xs font-bold text-slate-900">{struc.name}</h4>
+                            <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{struc.desc}</p>
+                          </div>
+                          <span className="mt-2 text-[9px] font-black uppercase tracking-wider text-indigo-600">
+                            {struc.badge}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. THEME COLOR SELECTION */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-black text-slate-900">2. Select Color Theme</h3>
+                      <p className="text-xs text-slate-500">Choose from 100 high-converting modern color palettes</p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                      Theme {card.theme_id || 26} Active
+                    </span>
+                  </div>
+
+                {/* Category Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                  {THEME_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition shrink-0 ${
+                        selectedCategory === cat
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto p-1 pr-2">
-                  {THEMES.map((t) => {
+                  {(selectedCategory === 'All' ? THEMES : THEMES.filter(t => t.category === selectedCategory)).map((t) => {
                     const isSelected = card.theme_id === t.id;
                     return (
                       <div
@@ -279,6 +360,7 @@ export default function CardBuilder({ cardId, onBack, onViewPublicCard }) {
                       </div>
                     );
                   })}
+                  </div>
                 </div>
               </div>
             )}
@@ -723,8 +805,15 @@ export default function CardBuilder({ cardId, onBack, onViewPublicCard }) {
           <div className="lg:col-span-5 flex justify-center sticky top-36">
             <div className="w-full max-w-[340px]">
               <div className="text-center mb-2 flex items-center justify-between text-xs font-bold text-slate-500">
-                <span>Live Smartphone Preview</span>
-                <span className="text-emerald-600">● Live Sync</span>
+                <span className="flex items-center gap-1.5">
+                  <span>Preview</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-indigo-100 text-indigo-700">
+                    {card.layout_template || 'executive'}
+                  </span>
+                </span>
+                <span className="text-emerald-600 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Live Sync
+                </span>
               </div>
 
               {/* Realistic Phone Bezel */}
@@ -734,37 +823,181 @@ export default function CardBuilder({ cardId, onBack, onViewPublicCard }) {
                   <div className="w-16 h-2.5 bg-slate-800 rounded-b-md" />
                 </div>
 
-                {/* Banner & Logo */}
-                <div 
-                  className="h-28 relative flex items-center justify-center"
-                  style={{ background: currentTheme.gradient }}
-                >
-                  <div className="absolute -bottom-8 w-16 h-16 rounded-full border-2 border-white bg-white shadow-lg overflow-hidden flex items-center justify-center font-extrabold text-slate-900 text-xs">
-                    {card.logo_url ? (
-                      <img src={card.logo_url} alt="Logo" className="w-full h-full object-cover" />
-                    ) : (
-                      'LOGO'
-                    )}
+                {/* Banner & Logo - Dynamic by Layout Structure */}
+                {card.layout_template === 'editorial' ? (
+                  /* Editorial Style Header Preview */
+                  <div className="p-4 text-left border-b border-slate-100 flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Editorial</span>
+                      <h4 className="font-black text-sm uppercase text-slate-900 leading-tight">
+                        {card.company_name || 'Your Company Name'}
+                      </h4>
+                      <p className="text-[10px] text-slate-500 font-semibold">
+                        {card.personal_name || 'Full Name'} • {card.designation || 'Designation'}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 rounded-xl border border-slate-200 bg-white p-0.5 shrink-0 overflow-hidden">
+                      {card.logo_url ? (
+                        <img src={card.logo_url} alt="Logo" className="w-full h-full object-cover rounded-lg" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[8px] font-black">LOGO</div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ) : card.layout_template === 'cyber' ? (
+                  /* Cyber Style Header Preview */
+                  <div className="relative font-mono text-left">
+                    <div className="bg-slate-950 p-3 pb-2 text-[9px] text-cyan-400 flex justify-between border-b border-cyan-500/20">
+                      <span>SYS.ONLINE // {card.slug || 'apex'}</span>
+                      <span className="text-emerald-400">SECURE</span>
+                    </div>
+                    <div className="h-20 relative flex items-center justify-center bg-slate-900 border-b border-cyan-500/30" style={{ background: currentTheme.gradient }}>
+                      <div className="absolute inset-0 bg-[linear-gradient(to_right,#00ffff15_1px,transparent_1px),linear-gradient(to_bottom,#00ffff15_1px,transparent_1px)] bg-[size:12px_12px]" />
+                    </div>
+                    <div className="flex items-center gap-2 px-3 -mt-6 relative z-10">
+                      <div className="w-14 h-14 rounded-xl border-2 border-cyan-400 bg-slate-950 p-0.5 overflow-hidden shadow-[0_0_12px_rgba(6,182,212,0.4)]">
+                        {card.logo_url ? (
+                          <img src={card.logo_url} alt="Logo" className="w-full h-full object-cover rounded-lg" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[8px] font-black text-cyan-400">OPERATOR</div>
+                        )}
+                      </div>
+                      <div className="pt-5">
+                        <h4 className="font-black text-xs text-slate-900 uppercase truncate max-w-[170px]">{card.company_name || 'Your Company Name'}</h4>
+                        <p className="text-[10px] text-slate-500 font-sans">{card.personal_name || 'Full Name'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : card.layout_template === 'split' ? (
+                  /* Dynamic Split Header Preview */
+                  <div className="relative">
+                    <div 
+                      className="h-24 relative overflow-hidden flex items-start justify-end p-2"
+                      style={{ 
+                        background: currentTheme.gradient,
+                        clipPath: "polygon(0 0, 100% 0, 100% 80%, 0 100%)" 
+                      }}
+                    >
+                      <span className="px-2 py-0.5 rounded-full text-[8px] font-black bg-black/40 text-white backdrop-blur-md">PRO</span>
+                    </div>
+                    <div className="flex items-end gap-3 px-3 -mt-8 relative z-10 text-left">
+                      <div className="w-14 h-14 rounded-2xl border-2 border-white bg-white shadow-lg overflow-hidden shrink-0">
+                        {card.logo_url ? (
+                          <img src={card.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[9px] font-black">LOGO</div>
+                        )}
+                      </div>
+                      <div className="pb-1 flex-1">
+                        <h4 className="font-black text-xs text-slate-900 truncate">{card.company_name || 'Your Company Name'}</h4>
+                        <p className="text-[10px] text-slate-500 font-medium truncate">{card.personal_name || 'Full Name'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : card.layout_template === 'compact' ? (
+                  /* Compact Bio Preview */
+                  <div className="pt-4 px-4 text-center space-y-1.5">
+                    <div className="w-16 h-16 rounded-full mx-auto border-2 border-slate-200 overflow-hidden shadow-md">
+                      {card.logo_url ? (
+                        <img src={card.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[9px] font-black">LOGO</div>
+                      )}
+                    </div>
+                    <h4 className="font-black text-xs text-slate-900">{card.company_name || 'Your Company Name'}</h4>
+                    <p className="text-[10px] text-slate-500 font-semibold">{card.personal_name || 'Full Name'} • {card.designation || 'Founder'}</p>
+                  </div>
+                ) : card.layout_template === 'royale' ? (
+                  /* Imperial Royale Preview */
+                  <div className="relative font-serif text-center pt-3 pb-2 bg-gradient-to-b from-stone-900 to-black text-amber-200 border-b-2 border-amber-500/50">
+                    <div className="w-14 h-14 rounded-full mx-auto p-1 bg-gradient-to-tr from-amber-400 to-amber-600 border border-amber-300 shadow-md">
+                      <div className="w-full h-full rounded-full overflow-hidden bg-black">
+                        {card.logo_url ? <img src={card.logo_url} alt="Logo" className="w-full h-full object-cover" /> : <div className="text-[8px] font-bold text-amber-300 pt-3">CREST</div>}
+                      </div>
+                    </div>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-amber-100 mt-2">{card.company_name || 'Your Company'}</h4>
+                    <p className="text-[9px] font-sans text-amber-300/80">{card.personal_name || 'Full Name'}</p>
+                  </div>
+                ) : card.layout_template === 'neoglass' ? (
+                  /* NeoGlass Preview */
+                  <div className="relative p-3 bg-gradient-to-tr from-cyan-500/20 via-indigo-500/20 to-purple-500/20 backdrop-blur-md border-b border-cyan-400/30 text-center">
+                    <div className="w-14 h-14 rounded-2xl mx-auto p-1 bg-white/40 border border-white/60 shadow-lg">
+                      {card.logo_url ? <img src={card.logo_url} alt="Logo" className="w-full h-full object-cover rounded-xl" /> : <div className="text-[8px] font-bold text-cyan-600 pt-3">GLASS</div>}
+                    </div>
+                    <h4 className="font-black text-xs text-slate-900 dark:text-white mt-1.5">{card.company_name || 'Your Company'}</h4>
+                    <p className="text-[10px] text-cyan-600 font-semibold">{card.personal_name || 'Full Name'}</p>
+                  </div>
+                ) : card.layout_template === 'bento' ? (
+                  /* Bento Grid Preview */
+                  <div className="p-3 bg-slate-900 text-white border-b border-slate-800 text-left flex items-center gap-2.5">
+                    <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 p-0.5 shrink-0 overflow-hidden">
+                      {card.logo_url ? <img src={card.logo_url} alt="Logo" className="w-full h-full object-cover rounded-lg" /> : <div className="text-[8px] font-bold pt-2 text-center">TILE</div>}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[8px] font-black uppercase text-blue-400">Bento Grid</span>
+                      <h4 className="font-bold text-xs truncate">{card.company_name || 'Your Company'}</h4>
+                      <p className="text-[9px] text-slate-400 truncate">{card.personal_name || 'Full Name'}</p>
+                    </div>
+                  </div>
+                ) : card.layout_template === 'brutalist' ? (
+                  /* Neo-Brutalist Preview */
+                  <div className="p-3 bg-amber-300 border-b-3 border-black font-mono text-left shadow-[2px_2px_0px_#000]">
+                    <div className="flex items-center gap-2">
+                      <div className="w-12 h-12 bg-white border-2 border-black shrink-0 overflow-hidden shadow-[2px_2px_0px_#000]">
+                        {card.logo_url ? <img src={card.logo_url} alt="Logo" className="w-full h-full object-cover" /> : <div className="text-[8px] font-bold pt-2 text-center">POP</div>}
+                      </div>
+                      <div>
+                        <h4 className="font-black text-xs text-black uppercase leading-tight truncate">{card.company_name || 'Your Company'}</h4>
+                        <p className="text-[9px] font-bold text-black bg-white px-1 border border-black inline-block mt-0.5">{card.personal_name || 'Full Name'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : card.layout_template === 'nordic' ? (
+                  /* Nordic Minimal Preview */
+                  <div className="p-4 bg-stone-100 border-b border-stone-200 text-center space-y-1">
+                    <div className="w-12 h-12 rounded-full mx-auto border border-stone-300 overflow-hidden">
+                      {card.logo_url ? <img src={card.logo_url} alt="Logo" className="w-full h-full object-cover" /> : <div className="text-[8px] font-medium pt-3 text-stone-500">M</div>}
+                    </div>
+                    <h4 className="font-light text-xs text-stone-900">{card.company_name || 'Your Company'}</h4>
+                    <p className="text-[9px] text-stone-500">{card.personal_name || 'Full Name'}</p>
+                  </div>
+                ) : (
+                  /* Default Executive Layout Preview */
+                  <div 
+                    className="h-28 relative flex items-center justify-center"
+                    style={{ background: currentTheme.gradient }}
+                  >
+                    <div className="absolute -bottom-8 w-16 h-16 rounded-2xl border-2 border-white bg-white shadow-lg overflow-hidden flex items-center justify-center font-extrabold text-slate-900 text-xs">
+                      {card.logo_url ? (
+                        <img src={card.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                      ) : (
+                        'LOGO'
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                <div className="pt-10 px-4 pb-4 space-y-2">
-                  <h4 className="font-black text-sm text-slate-900 uppercase tracking-tight">
-                    {card.company_name || 'Your Company Name'}
-                  </h4>
-                  <p className="text-[10px] text-slate-500 font-semibold">
-                    {card.personal_name || 'Full Name'} • {card.designation || 'Designation'}
-                  </p>
+                <div className={`${card.layout_template === 'editorial' || card.layout_template === 'cyber' || card.layout_template === 'split' || card.layout_template === 'compact' || card.layout_template === 'royale' || card.layout_template === 'neoglass' || card.layout_template === 'bento' || card.layout_template === 'brutalist' || card.layout_template === 'nordic' ? 'pt-2' : 'pt-10'} px-4 pb-4 space-y-2`}>
+                  {card.layout_template !== 'editorial' && card.layout_template !== 'cyber' && card.layout_template !== 'split' && card.layout_template !== 'compact' && card.layout_template !== 'royale' && card.layout_template !== 'neoglass' && card.layout_template !== 'bento' && card.layout_template !== 'brutalist' && card.layout_template !== 'nordic' && (
+                    <>
+                      <h4 className="font-black text-sm text-slate-900 uppercase tracking-tight">
+                        {card.company_name || 'Your Company Name'}
+                      </h4>
+                      <p className="text-[10px] text-slate-500 font-semibold">
+                        {card.personal_name || 'Full Name'} • {card.designation || 'Designation'}
+                      </p>
+                    </>
+                  )}
 
                   {/* 4 Action buttons */}
-                  <div className="flex justify-around pt-2">
+                  <div className="flex justify-around pt-1">
                     {[Phone, MessageSquare, Mail, Globe].map((Icon, i) => (
                       <div 
                         key={i} 
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-white shadow-md text-xs"
+                        className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-sm text-xs transition"
                         style={{ background: currentTheme.primary }}
                       >
-                        <Icon className="w-4 h-4" />
+                        <Icon className="w-3.5 h-3.5" />
                       </div>
                     ))}
                   </div>
@@ -776,8 +1009,8 @@ export default function CardBuilder({ cardId, onBack, onViewPublicCard }) {
                   </div>
 
                   {/* Theme indicator */}
-                  <div className="pt-2 text-[10px] text-slate-400 font-medium">
-                    Rendered with <strong>{currentTheme.name}</strong>
+                  <div className="pt-1 text-[10px] text-slate-400 font-medium">
+                    Theme: <strong>{currentTheme.name}</strong>
                   </div>
                 </div>
               </div>

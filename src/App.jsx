@@ -15,6 +15,24 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authModal, setAuthModal] = useState({ open: false, mode: 'login' });
 
+  // Global Theme: 'dark' | 'light'
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('digicards_theme') || 'dark';
+  });
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('digicards_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // Check current session on mount
   useEffect(() => {
     fetch('/api/auth/me')
@@ -39,7 +57,6 @@ export default function App() {
     setCurrentView(view);
     setViewParam(param);
     if (extra) {
-      // e.g. theme override
       setViewParam({ slug: param, themeId: extra });
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -75,8 +92,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col font-['Plus_Jakarta_Sans',sans-serif] bg-slate-50 text-slate-900">
-      {/* Navbar shown on non-card views, or with back navigation */}
+    <div className="min-h-screen flex flex-col font-['Plus_Jakarta_Sans',sans-serif] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+      {/* Navbar shown on non-card views */}
       {currentView !== 'public-card' && (
         <Navbar
           currentView={currentView}
@@ -85,6 +102,8 @@ export default function App() {
           onLogout={handleLogout}
           openAuthModal={(mode) => setAuthModal({ open: true, mode })}
           onQuickLogin={handleQuickLogin}
+          theme={theme}
+          toggleTheme={toggleTheme}
         />
       )}
 
@@ -94,12 +113,13 @@ export default function App() {
           <LandingPage
             setView={handleSetView}
             openAuthModal={(mode) => setAuthModal({ open: true, mode })}
+            theme={theme}
           />
         )}
 
         {currentView === 'public-card' && (
           <PublicCardView
-            slug={typeof viewParam === 'object' && viewParam !== null ? viewParam.slug : (viewParam || 'ABC-Marketing')}
+            slug={typeof viewParam === 'object' && viewParam !== null ? viewParam.slug : (viewParam || 'apex-studio')}
             overrideThemeId={typeof viewParam === 'object' && viewParam !== null ? viewParam.themeId : null}
             onBack={() => handleSetView('landing')}
           />

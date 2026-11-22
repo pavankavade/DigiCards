@@ -4,7 +4,7 @@ import {
   Briefcase, CheckCircle2, Copy, Check, KeyRound, Building
 } from 'lucide-react';
 
-export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAuthSuccess, onQuickLogin }) {
+export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAuthSuccess }) {
   const [mode, setMode] = useState(initialMode); // 'login' or 'register'
   const [selectedRole, setSelectedRole] = useState('customer'); // 'customer', 'franchisee', 'admin'
   const [regType, setRegType] = useState('customer'); // 'customer' or 'franchisee'

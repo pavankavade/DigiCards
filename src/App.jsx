@@ -153,7 +153,6 @@ export default function App() {
           else if (user.role === 'franchisee') setCurrentView('franchisee');
           else setCurrentView('customer');
         }}
-        onQuickLogin={handleQuickLogin}
       />
     </div>
   );
